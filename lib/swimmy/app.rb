@@ -17,11 +17,11 @@ module Swimmy
 
     MESSAGE_QUEUE = []
     def initialize(opt)
-      if opt[:spreadsheet]
-        Swimmy::Command.spreadsheet =
-          initialize_spreadsheet(opt[:spreadsheet])
-        opt.delete(:spreadsheet)
-      end
+      # if opt[:spreadsheet]
+      #   Swimmy::Command.spreadsheet =
+      #     initialize_spreadsheet(opt[:spreadsheet])
+      #   opt.delete(:spreadsheet)
+      # end
 
       if opt[:mqtt_endpoint]
         Swimmy::Command.mqtt_client =

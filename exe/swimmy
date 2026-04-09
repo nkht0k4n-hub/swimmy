@@ -100,24 +100,24 @@ def to_open_struct(obj)
   end
 end
 
-def initialize_spreadsheet(spreadsheet_id)
-  require "clian"
-  require "sheetq"
+# def initialize_spreadsheet(spreadsheet_id)
+#   require "clian"
+#   require "sheetq"
 
-  dir = "~/.config/sheetq/"
+#   dir = "~/.config/sheetq/"
 
-  config = Sheetq::Config.create_from_file(File.expand_path("config.yml", dir))
+#   config = Sheetq::Config.create_from_file(File.expand_path("config.yml", dir))
 
-  client = Sheetq::GoogleClient.new(
-    config.general.client_id,
-    config.general.client_secret,
-    File.expand_path("token_store.yml", dir),
-    config.general.default_user
-  )
+#   client = Sheetq::GoogleClient.new(
+#     config.general.client_id,
+#     config.general.client_secret,
+#     File.expand_path("token_store.yml", dir),
+#     config.general.default_user
+#   )
 
-  client.auth
-  return Sheetq::Service::Spreadsheet.new(client, spreadsheet_id)
-end
+#   client.auth
+#   return Sheetq::Service::Spreadsheet.new(client, spreadsheet_id)
+# end
 
 def initialize_mqtt_client(broker_endpoint)
   require 'mqtt'
@@ -125,8 +125,8 @@ def initialize_mqtt_client(broker_endpoint)
   return client
 end
 
-Swimmy::Command.spreadsheet =
-  initialize_spreadsheet(ENV["SWIMMY_SHEET_ID"])
+# Swimmy::Command.spreadsheet =
+#   initialize_spreadsheet(ENV["SWIMMY_SHEET_ID"])
 
 Swimmy::Command.mqtt_client =
   initialize_mqtt_client(ENV["MQTT_ENDPOINT"])

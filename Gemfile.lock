@@ -65,6 +65,7 @@ GEM
     date (3.4.1)
     declarative (0.0.20)
     diff-lcs (1.6.2)
+    domain_name (0.6.20240107)
     dotenv (2.8.1)
     drb (2.2.1)
     enumdate (0.1.1)
@@ -92,6 +93,8 @@ GEM
       os (>= 0.9, < 2.0)
       signet (~> 0.7)
     hashie (5.0.0)
+    http-cookie (1.1.4)
+      domain_name (~> 0.5)
     httpclient (2.9.0)
       mutex_m
     i18n (1.14.7)
@@ -109,11 +112,16 @@ GEM
       net-pop
       net-smtp
     memoist (0.16.2)
+    mime-types (3.7.0)
+      logger
+      mime-types-data (~> 3.2025, >= 3.2025.0507)
+    mime-types-data (3.2026.0407)
     mini_mime (1.1.5)
     mini_portile2 (2.8.9)
     minitest (5.25.5)
     mqtt (0.6.0)
     multi_json (1.15.0)
+    multi_xml (0.6.0)
     multipart-post (2.4.1)
     mutex_m (0.3.0)
     net-imap (0.4.22)
@@ -125,19 +133,45 @@ GEM
       timeout
     net-smtp (0.5.1)
       net-protocol
+    netrc (0.11.0)
     news-api (0.2.0)
     nio4r (2.7.4)
     nokogiri (1.15.7)
       mini_portile2 (~> 2.8.2)
       racc (~> 1.4)
+    oauth2 (2.0.18)
+      faraday (>= 0.17.3, < 4.0)
+      jwt (>= 1.0, < 4.0)
+      logger (~> 1.2)
+      multi_xml (~> 0.5)
+      rack (>= 1.2, < 4)
+      snaky_hash (~> 2.0, >= 2.0.3)
+      version_gem (~> 1.1, >= 1.1.9)
+    omniauth (2.1.4)
+      hashie (>= 3.4.6)
+      logger
+      rack (>= 2.2.3)
+      rack-protection
+    omniauth-oauth2 (1.9.0)
+      oauth2 (>= 2.0.2, < 3)
+      omniauth (~> 2.0)
     os (1.1.4)
     ostruct (0.6.1)
     public_suffix (5.1.1)
     racc (1.8.1)
+    rack (3.2.6)
+    rack-protection (4.2.1)
+      base64 (>= 0.1.0)
+      logger (>= 1.6.0)
+      rack (>= 3.0.0, < 4)
     representable (3.2.0)
       declarative (< 0.1.0)
       trailblazer-option (>= 0.1.1, < 0.2.0)
       uber (< 0.2.0)
+    rest-client (2.0.2)
+      http-cookie (>= 1.0.2, < 2.0)
+      mime-types (>= 1.16, < 4.0)
+      netrc (~> 0.8)
     retriable (3.1.2)
     rspec (3.13.0)
       rspec-core (~> 3.13.0)
@@ -152,6 +186,10 @@ GEM
       diff-lcs (>= 1.2.0, < 2.0)
       rspec-support (~> 3.13.0)
     rspec-support (3.13.3)
+    rspotify (2.12.4)
+      addressable (~> 2.8.0)
+      omniauth-oauth2 (>= 1.6)
+      rest-client (~> 2.0.2)
     securerandom (0.3.2)
     signet (0.19.0)
       addressable (~> 2.8)
@@ -169,6 +207,9 @@ GEM
       gli
       hashie
       websocket-driver
+    snaky_hash (2.0.3)
+      hashie (>= 0.1.0, < 6)
+      version_gem (>= 1.1.8, < 3)
     systemu (2.6.5)
     thor (1.3.2)
     timeout (0.4.3)
@@ -177,6 +218,7 @@ GEM
     tzinfo (2.0.6)
       concurrent-ruby (~> 1.0)
     uber (0.1.0)
+    version_gem (1.1.9)
     websocket (1.2.11)
     websocket-driver (0.7.7)
       base64
@@ -194,6 +236,7 @@ DEPENDENCIES
   news-api
   nokogiri
   rspec
+  rspotify
   sheetq!
   slack-ruby-bot
   slack_socket_mode_bot!
