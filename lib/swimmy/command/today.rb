@@ -23,12 +23,12 @@ module Swimmy
           return
         end
 
-        begin
+        # begin
           message = "今日 (#{Date.today.strftime('%Y-%m-%d')}) の予定\n"
           message << GetEvents.new(spreadsheet, google_oauth).message
-        rescue
-          message = "予定の取得に失敗しました．"
-        end
+        # rescue
+        #   message = "予定の取得に失敗しました．"
+        # end
 
         client.say(channel: data.channel, text: message)
       end # command message
@@ -74,7 +74,6 @@ module Swimmy
 
       def get_event(calendar_id, calendar_name)
         events = []
-
         raw_events = hit_goolge_calendar_api(calendar_id, @google_oauth.token)
         events = format_events_from_json(raw_events, calendar_name)
 

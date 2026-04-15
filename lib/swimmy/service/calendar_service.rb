@@ -64,6 +64,7 @@ module Swimmy
         json = JSON.parse(json_str)
         json['items'].each do |event|
           start = event['start']['dateTime'] || event['start']['date']
+          #end = event['end']['dateTime'] || event['end']['date']
           summary = event['summary']
           formated_events.push(Swimmy::Resource::Event.new(start, summary, calendar_name))
         end

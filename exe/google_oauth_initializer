@@ -32,16 +32,30 @@ class OauthData
     new(client_id, client_secret, redirect_uri, auth_uri, token_uri)
   end
 
+  # def to_authorization_url
+  #   @auth_uri \
+  #      + '?response_type=code' \
+  #      + '&client_id=' \
+  #      + @client_id \
+  #      + '&redirect_uri=' \
+  #      + @redirect_uri \
+  #      + '&scope=https://www.googleapis.com/auth/photoslibrary.appendonly ' \
+  #      + 'https://www.googleapis.com/auth/calendar.events.readonly' \
+  #      + '&access_type=offline'
+  # end
   def to_authorization_url
-    @auth_uri \
-       + '?response_type=code' \
-       + '&client_id=' \
-       + @client_id \
-       + '&redirect_uri=' \
-       + @redirect_uri \
-       + '&scope=https://www.googleapis.com/auth/photoslibrary.appendonly ' \
-       + 'https://www.googleapis.com/auth/calendar.events.readonly' \
-       + '&access_type=offline'
+    scopes = [
+      'https://www.googleapis.com/auth/photoslibrary.appendonly',
+      'https://www.googleapis.com/auth/calendar',
+      'https://www.googleapis.com/auth/tasks'
+    ]
+
+    @auth_uri +
+      '?response_type=code' +
+      '&client_id=' + URI.encode_www_form_component(@client_id) +
+      '&redirect_uri=' + URI.encode_www_form_component(@redirect_uri) +
+      '&scope=' + URI.encode_www_form_component(scopes.join(' ')) +
+      '&access_type=offline'
   end
 
   def to_authentication_uri
@@ -130,7 +144,7 @@ token_file = 'config/tokens.json'
 if File.exist?(token_file)
   puts "#{token_file} already exists"
   print "Do you want to override #{token_file}? [y/N]: "
-  res = gets
+  res = gets.chomp
   if !(res == 'y' || res == 'yes' || res == 'Y')
     puts 'Aborted'
     exit
