@@ -11,26 +11,37 @@ module Swimmy
               begin
                user = client.web_client.users_info(user: data.user).user
                user_name = user.profile.display_name
-               
+               if user_name.nil?
+                error_msg="ユーザの表示名が見つかりませんでした。"
+                raise
+               end
                github_name = NameResolver.new(spreadsheet).name_slack_to_github(user_name)
                #github_name = NameResolver.new(spreadsheet).name_slack_to_github("atrantica")
                if github_name.nil?
                 error_msg="ユーザ #{user_name}のGitHubアカウントが見つかりませんでした．"
+                raise
                 #client.say(channel: data.channel, text: "ユーザ #{user_name}のGitHubアカウントが見つかりませんでした。")
                end
                # next
                #else
                #client.say(channel: data.channel, text: "ユーザ #{user_name}のGitHubアカウントは #{github_name} です。")
                #end
-               client.say(channel: data.channel, text: "タスクの締め切りを表示します...")
-               target_dir="/home/nakahata/git/rask_cli"
-               command = "cargo run -- rtask #{github_name}"
+               
+               target_dir="/home/nakahata/git/rask_cli/target/release"
+               command = "./rask_cli get_tasks #{github_name} -j"
+               #command = "./rask-cli get_task -j  #{github_name}"
                RASK_URL = ENV["RASK_URL"]
                stdout,stderr,status= Open3.capture3(command,chdir: target_dir)
                if status.success?
-                  msg=stdout.empty? ? "taskの実行に成功しましたが、出力はありませんでした。" : stdout
-                  client.say(channel: data.channel, text:"body=#{msg}")
-                  list = JSON.parse(msg)
+                  msg=stdout.empty? ? "rtaskの実行に成功しましたが、出力はありませんでした。" : stdout
+                  #client.say(channel: data.channel, text:"body=#{msg}")
+                  begin
+                    list = JSON.parse(msg)
+                  rescue JSON::ParserError=>e
+                    error_msg="JSONのパースに失敗しました。出力内容を確認してください。"
+                    raise
+                  end
+                  client.say(channel: data.channel, text: "タスクの締め切りを表示します...")
                   today = Date.today
                   output_msg=""
                   last_day=Date.new(today.year, today.month, -1)
@@ -48,8 +59,9 @@ module Swimmy
                     if daily_tasks.any?
                       output_msg += "#{today.month}月#{i}日:\n"
                       daily_tasks.each do |task|
-                        output_msg += "  - #{task}:"
-                        output_msg += "    #{RASK_URL}/tasks/#{task_id[count]}\n"
+                        content = "#{task}"
+                        url = "#{RASK_URL}/tasks/#{task_id[count]}"
+                        output_msg += "<#{url}|#{content}>\n"
                         count += 1
                       end
                     end
@@ -58,12 +70,12 @@ module Swimmy
 
                   
                 else
-                  error_msg = stderr.empty? ? "taskの実行に失敗しましたが、エラーメッセージはありませんでした。" : stderr
+                  error_msg = stderr.empty? ? "rtaskの実行に失敗しましたが、エラーメッセージはありませんでした。" : stderr
                   client.say(channel: data.channel, text: error_msg)
                 end
 
               rescue Errno::ENOENT
-                error_msg_d="ディレクトリ#{target_dir}が見つかりませんでした．"
+                error_msg_d="パス#{target_dir}が見つかりませんでした．"
                 client.say(channel: data.channel, text: error_msg_d)
               rescue => e
                 client.say(channel: data.channel, text: error_msg)

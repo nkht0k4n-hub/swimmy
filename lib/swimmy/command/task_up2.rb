@@ -7,8 +7,8 @@ module Swimmy
 
   module Command
 
-    class TaskUp < Swimmy::Command::Base
-            command "task_up" do |client, data, match|
+    class TaskUp2 < Swimmy::Command::Base
+            command "task_up2" do |client, data, match|
               begin
                user = client.web_client.users_info(user: data.user).user
                user_name = user.profile.display_name
@@ -21,13 +21,18 @@ module Swimmy
                #end
                client.say(channel: data.channel, text: "タスクの締め切りをグーグルカレンダに登録します...")
                target_dir="/home/nakahata/git/rask_cli"
-               command = "cargo run -- rask #{github_name}"
+               command = "cargo run -- rtask #{github_name}"
                RASK_URL = ENV["RASK_URL"]
                stdout,stderr,status= Open3.capture3(command,chdir: target_dir)
+               client.say(channel: data.channel, text: "stdout=#{stdout}")
                if status.success?
                   msg=stdout.empty? ? "task_upの実行に成功しましたが、出力はありませんでした。" : stdout
                   
-                  list = JSON.parse(msg)
+                  begin
+                    list = JSON.parse(msg)
+                  rescue JSON::ParserError=>e
+                    client.say(channel: data.channel, text: "parse error");
+                  end
                   today = Date.today
                   output_msg=""
                   last_day=Date.new(today.year, today.month, -1)
@@ -40,24 +45,31 @@ module Swimmy
                     client.say(channel: data.channel, text: msg)
                     return
                   end
-                  calendar_service = Swimmy::Service::GoogleCalendar.from_spreadsheet(google_oauth, spreadsheet, "nakahata")
+                  #calendar_service = Swimmy::Service::GoogleCalendar.from_spreadsheet(google_oauth, spreadsheet, "nakahata")
                   for i in 1..last_day.day do
                     target_date_str = "#{today.year}-#{format('%02d', today.month)}-#{format('%02d', i)}"
                     for item in list do
-                      if item["due_at"]&.include?(target_date_str) && item["assigner"]["name"]==github_name
+                      if item["due_at"]&.include?(target_date_str)
+ 
+                        tasks_service = Google::Apis::TasksV1::TasksService.new
+                        tasks_service.authorization = google_oauth.token
                         task_name = item["content"]
-                        start_time = Time.parse(item["due_at"]) - 3600 # 締め切りの1時間前を開始時間とする
-                        start_time = start_time.strftime("%Y/%m/%d/%H:%M")
-                        client.say(channel: data.channel, text: "タスクの開始時間: #{start_time}")
-                        end_time = Time.parse(item["due_at"])
-                        end_time = end_time.strftime("%Y/%m/%d/%H:%M")
-                        event = Swimmy::Resource::CalendarEvent.new(task_name, start_time, end_time)
-                        if check_event_exists?(event)
-                          client.say(channel: data.channel, text: "タスク「#{task_name}」は既にカレンダーに登録されています。")
-                        else
-                            calendar_service.add_event(event)
-                            client.say(channel: data.channel, text: "タスク「#{task_name}」をカレンダーに登録しました。")
-                        end
+                        task_date = Time.parse(item["due_at"])
+
+                        # タスクオブジェクトの作成
+                        new_task = Google::Apis::TasksV1::Task.new(
+                          title: task_name,
+                          due: task_date.rfc3339 # Tasksの期限は RFC3339 形式の文字列
+                        )
+
+                        # 登録実行 ('@default' はデフォルトのリストを指定)
+                        tasks_service.insert_task('@default', new_task)
+                        # if check_event_exists?(event)
+                        #   client.say(channel: data.channel, text: "タスク「#{task_name}」は既にカレンダーに登録されています。")
+                        # else
+                        #     calendar_service.add_event(event)
+                        #     client.say(channel: data.channel, text: "タスク「#{task_name}」をカレンダーに登録しました。")
+                        # end
                       end
                     end
                   end

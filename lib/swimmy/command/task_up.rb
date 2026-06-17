@@ -7,32 +7,38 @@ module Swimmy
 
   module Command
 
-    class TaskUp < Swimmy::Command::Base
-            command "task_up" do |client, data, match|
+    class RTaskToGC < Swimmy::Command::Base
+            command "rtask_to_gc" do |client, data, match|
               begin
                user = client.web_client.users_info(user: data.user).user
                user_name = user.profile.display_name
+               if user_name.nil?
+                error_msg="ユーザの表示名が見つかりませんでした。"
+                raise
+               end
                github_name = NameResolver.new(spreadsheet).name_slack_to_github(user_name)
-               #if github_name.nil?
-               # client.say(channel: data.channel, text: "ユーザ #{user_name}のGitHubアカウントが見つかりませんでした。")
-               # next
+               if github_name.nil?
+                error_msg="ユーザ #{user_name}のGitHubアカウントが見つかりませんでした。"
+                raise
+               end
                #else
                # client.say(channel: data.channel, text: "ユーザ #{user_name}のGitHubアカウントは #{github_name} です。")
                #end
-               client.say(channel: data.channel, text: "タスクの締め切りをグーグルカレンダに登録します...")
-               target_dir="/home/nakahata/git/rask_cli"
-               command = "cargo run -- rtask #{github_name}"
+               
+               target_dir="/home/nakahata/git/rask_cli/target/release"
+               command = "./rask_cli get_tasks #{github_name} -j"
                RASK_URL = ENV["RASK_URL"]
                stdout,stderr,status= Open3.capture3(command,chdir: target_dir)
-               client.say(channel: data.channel, text: "stdout=#{stdout}")
                if status.success?
-                  msg=stdout.empty? ? "task_upの実行に成功しましたが、出力はありませんでした。" : stdout
+                  msg=stdout.empty? ? "rtask_to_gcの実行に成功しましたが、出力はありませんでした。" : stdout
                   
                   begin
                     list = JSON.parse(msg)
                   rescue JSON::ParserError=>e
-                    client.say(channel: data.channel, text: "parse error");
+                    error_msg="JSONのパースに失敗しました。出力内容を確認してください。"
+                    raise
                   end
+                  # p list
                   today = Date.today
                   output_msg=""
                   last_day=Date.new(today.year, today.month, -1)
@@ -41,47 +47,52 @@ module Swimmy
                   google_oauth ||= begin
                     Swimmy::Resource::GoogleOAuth.new('config/credentials.json', 'config/tokens.json')
                   rescue => e
-                    msg = 'Google OAuthの認証に失敗しました．適切な認証情報が設定されているか確認してください．'
-                    client.say(channel: data.channel, text: msg)
-                    return
+                    error_msg = 'Google OAuthの認証に失敗しました．適切な認証情報が設定されているか確認してください．'
+                    raise
                   end
-                  #calendar_service = Swimmy::Service::GoogleCalendar.from_spreadsheet(google_oauth, spreadsheet, "nakahata")
-                  for i in 1..last_day.day do
+                  begin
+                    calendar_service = Swimmy::Service::GoogleCalendar.from_spreadsheet(google_oauth, spreadsheet, "GN")
+                  rescue => e
+                    error_msg = 'Google Calendarのサービスの初期化に失敗しました．スプレッドシートの設定を確認してください．'
+                    raise
+                  end
+
+                  range = 1..last_day.day
+
+                  range.each do |i|
                     target_date_str = "#{today.year}-#{format('%02d', today.month)}-#{format('%02d', i)}"
-                    for item in list do
+                    list.each do |item|
                       if item["due_at"]&.include?(target_date_str)
- 
-                        tasks_service = Google::Apis::TasksV1::TasksService.new
-                        tasks_service.authorization = google_oauth.token
                         task_name = item["content"]
-                        task_date = Time.parse(item["due_at"])
-
-                        # タスクオブジェクトの作成
-                        new_task = Google::Apis::TasksV1::Task.new(
-                          title: task_name,
-                          due: task_date.rfc3339 # Tasksの期限は RFC3339 形式の文字列
-                        )
-
-                        # 登録実行 ('@default' はデフォルトのリストを指定)
-                        tasks_service.insert_task('@default', new_task)
-                        # if check_event_exists?(event)
-                        #   client.say(channel: data.channel, text: "タスク「#{task_name}」は既にカレンダーに登録されています。")
-                        # else
-                        #     calendar_service.add_event(event)
-                        #     client.say(channel: data.channel, text: "タスク「#{task_name}」をカレンダーに登録しました。")
-                        # end
+                        start_time = Time.parse(item["due_at"]) - 3600 # 締め切りの1時間前を開始時間とする
+                        start_time = start_time.strftime("%Y/%m/%d/%H:%M")
+                        end_time = Time.parse(item["due_at"])
+                        end_time = end_time.strftime("%Y/%m/%d/%H:%M")
+                        client.say(channel: data.channel, text: "タスクの締切時間: #{end_time}")
+                        #client.say(channel: data.channel, text: "タスクの締め切りをグーグルカレンダに登録します...")
+                        event = Swimmy::Resource::CalendarEvent.new(task_name, start_time, end_time)
+                        # puts "-------------------------------------------------------\n\n\n"
+                        # p event
+                        # puts "-------------------------------------------------------\n\n\n"
+                        if check_event_exists?(event)
+                          client.say(channel: data.channel, text: "タスク「#{task_name}」は既にカレンダーに登録されています。")
+                        else
+                            calendar_service.add_event(event)
+                            client.say(channel: data.channel, text: "タスク「#{task_name}」をカレンダーに登録しました。")
+                        end
                       end
                     end
                   end
 
                   
                 else
-                  error_msg = stderr.empty? ? "task_upの実行に失敗しましたが、エラーメッセージはありませんでした。" : stderr
-                  client.say(channel: data.channel, text: error_msg)
+                  error_msg = stderr.empty? ? "rtask_to_gc の実行に失敗しましたが、エラーメッセージはありませんでした。" : stderr
+                  raise
                 end
 
               rescue Errno::ENOENT
-                client.say(channel: data.channel, text: "ディレクトリが見つかりません")
+                error_msg_d="パス#{target_dir}が見つかりませんでした．"
+                client.say(channel: data.channel, text: error_msg_d)  
               rescue => e
                 debug_msg = "エラー発生: #{e.message} (#{e.class})\n場所: #{e.backtrace.first}"
                 client.say(channel: data.channel, text: debug_msg)
@@ -96,9 +107,9 @@ module Swimmy
               calendars = sheet.fetch
               #calendarsは(カレンダー名，カレンダーid)の組
               events = service.get_events(calendars,event.name)
-              puts "-------------------------------------------------------\n\n\n"
-              p events
-              puts "-------------------------------------------------------\n\n\n"
+                # puts "-------------------------------------------------------\n\n\n"
+                # p events
+                # puts "-------------------------------------------------------\n\n\n"
               if events.any? {|e| e && e.summary == event.name && e.start ==  event.start.iso8601}
                 return true
               end
