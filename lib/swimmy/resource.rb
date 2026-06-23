@@ -23,5 +23,7 @@ module Swimmy
     autoload :BookmarkEntry, "#{dir}/bookmark.rb"
     autoload :CalendarEvent, "#{dir}/calendar_event.rb"
     autoload :ArtistInfo , "#{dir}/artist_info.rb"
+    autoload :RTaskToGc, "#{dir}/rtask_to_gc.rb"
+    autoload :RTask, "#{dir}/rtask.rb"
   end
 end

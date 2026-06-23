@@ -1,104 +1,37 @@
-require 'open3'
-require 'json'
-require 'date'
+require "swimmy/service/rtask"
 
 module Swimmy
 
   module Command
 
     class RTask < Swimmy::Command::Base
-            command "rtask" do |client, data, match|
-              begin
-               user = client.web_client.users_info(user: data.user).user
-               user_name = user.profile.display_name
-               if user_name.nil?
-                error_msg="ユーザの表示名が見つかりませんでした。"
-                raise
-               end
-               github_name = NameResolver.new(spreadsheet).name_slack_to_github(user_name)
-               #github_name = NameResolver.new(spreadsheet).name_slack_to_github("atrantica")
-               if github_name.nil?
-                error_msg="ユーザ #{user_name}のGitHubアカウントが見つかりませんでした．"
-                raise
-                #client.say(channel: data.channel, text: "ユーザ #{user_name}のGitHubアカウントが見つかりませんでした。")
-               end
-               # next
-               #else
-               #client.say(channel: data.channel, text: "ユーザ #{user_name}のGitHubアカウントは #{github_name} です。")
-               #end
-               
-               target_dir="/home/nakahata/git/rask_cli/target/release"
-               command = "./rask_cli get_tasks #{github_name} -j"
-               #command = "./rask-cli get_task -j  #{github_name}"
-               RASK_URL = ENV["RASK_URL"]
-               stdout,stderr,status= Open3.capture3(command,chdir: target_dir)
-               if status.success?
-                  msg=stdout.empty? ? "rtaskの実行に成功しましたが、出力はありませんでした。" : stdout
-                  #client.say(channel: data.channel, text:"body=#{msg}")
-                  begin
-                    list = JSON.parse(msg)
-                  rescue JSON::ParserError=>e
-                    error_msg="JSONのパースに失敗しました。出力内容を確認してください。"
-                    raise
-                  end
-                  client.say(channel: data.channel, text: "タスクの締め切りを表示します...")
-                  today = Date.today
-                  output_msg=""
-                  last_day=Date.new(today.year, today.month, -1)
-                  for i in 1..last_day.day do
-                    daily_tasks=[]
-                    task_id=[]
-                    target_date_str = "#{today.year}-#{format('%02d', today.month)}-#{format('%02d', i)}"
-                    for item in list do
-                      if item["due_at"]&.include?(target_date_str)
-                        daily_tasks << item["content"]
-                        task_id << item["id"]
-                      end
-                    end
-                    count=0
-                    if daily_tasks.any?
-                      output_msg += "#{today.month}月#{i}日:\n"
-                      daily_tasks.each do |task|
-                        content = "#{task}"
-                        url = "#{RASK_URL}/tasks/#{task_id[count]}"
-                        output_msg += "<#{url}|#{content}>\n"
-                        count += 1
-                      end
-                    end
-                  end
-                  client.say(channel: data.channel, text: output_msg) if output_msg != ""
+      command "rtask" do |client, data, match|
+        begin
+          user = client.web_client.users_info(user: data.user).user
+          user_name = user.profile.display_name
+          raise ArgumentError, "ユーザの表示名が見つかりませんでした．" if user_name.nil?
 
-                  
-                else
-                  error_msg = stderr.empty? ? "rtaskの実行に失敗しましたが、エラーメッセージはありませんでした。" : stderr
-                  client.say(channel: data.channel, text: error_msg)
-                end
+          result = Swimmy::Service::RTask.new(spreadsheet,target_dir:ENV['RASK_CLI_PASS'],rask_url:ENV['RASK_URL']).list_tasks(user_name)
+          client.say(channel: data.channel, text: result)
+        rescue Swimmy::Service::RTask::RTaskError => e
+          client.say(channel: data.channel, text: e.message)
+   
+        rescue Errno::ENOENT => e
+          client.say(channel: data.channel, text: "必要なファイルまたはディレクトリが見つかりませんでした: #{e.message}")
+        rescue => e
+          puts e.full_message
 
-              rescue Errno::ENOENT
-                error_msg_d="パス#{target_dir}が見つかりませんでした．"
-                client.say(channel: data.channel, text: error_msg_d)
-              rescue => e
-                client.say(channel: data.channel, text: error_msg)
-                # debug_msg = "エラー発生: #{e.message} (#{e.class})\n場所: #{e.backtrace.first}"
-                # client.say(channel: data.channel, text: debug_msg)
-              end
-            end
-    end
-
-    class NameResolver
-      require "sheetq"
-      attr_reader :spreadsheet
-      def initialize(spreadsheet)
-          @spreadsheet = spreadsheet
+          raise
+        end
       end
 
-      def name_slack_to_github(slack_name)
-          members = spreadsheet.sheet("members", Swimmy::Resource::Member).fetch
-          member = members.find {|m| m.account== slack_name}
-          member&.github
+      help do
+        title "rtask"
+        desc "rtaskのタスクと期限を表示します．"
+        long_desc "rtask\nGitHubのタスクを月ごとに一覧表示します．"
       end
-        # ここでSlackのユーザ名をGitHubのユーザ名に変換するロジックを実
     end
+
   end
 
 end

@@ -2,7 +2,7 @@ require 'time'
 
 module Swimmy
   module Resource
-    class TaskUpTask
+    class RTaskToGc
       attr_reader :id, :content, :due_at
 
       def initialize(attributes)

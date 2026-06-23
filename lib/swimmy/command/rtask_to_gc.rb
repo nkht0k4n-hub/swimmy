@@ -1,3 +1,5 @@
+require "swimmy/service/rtask_to_gc"
+
 module Swimmy
 
   module Command
@@ -9,9 +11,9 @@ module Swimmy
           user_name = user.profile.display_name
           raise ArgumentError, "ユーザの表示名が見つかりませんでした。" if user_name.nil?
 
-          result = Swimmy::Service::TaskUp.new(spreadsheet).sync_rtask_to_google_calendar(user_name)
+          result = Swimmy::Service::RTaskToGc.new(spreadsheet).sync_rtask_to_google_calendar(user_name)
           client.say(channel: data.channel, text: result)
-        rescue Swimmy::Service::TaskUp::TaskUpError => e
+        rescue Swimmy::Service::RTaskToGc::RTaskToGcError => e
           client.say(channel: data.channel, text: e.message)
         rescue Errno::ENOENT => e
           client.say(channel: data.channel, text: "必要なファイルまたはディレクトリが見つかりませんでした: #{e.message}")

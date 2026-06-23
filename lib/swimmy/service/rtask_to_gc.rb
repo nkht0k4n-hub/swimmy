@@ -2,13 +2,14 @@ require 'open3'
 require 'json'
 require 'date'
 require 'time'
+require 'swimmy/resource'
 
 module Swimmy
   module Service
-    class TaskUp
-      class TaskUpError < StandardError; end
+    class RTaskToGc
+      class RTaskToGcError < StandardError; end
 
-      RASK_CLI_DIR = "/home/nakahata/git/rask_cli/target/release".freeze
+      RASK_CLI_DIR =  ENV['RASK_CLI_PASS']
 
       def initialize(spreadsheet, target_dir: RASK_CLI_DIR)
         @spreadsheet = spreadsheet
@@ -17,7 +18,7 @@ module Swimmy
 
       def sync_rtask_to_google_calendar(slack_name)
         github_name = NameResolver.new(@spreadsheet).name_slack_to_github(slack_name)
-        raise TaskUpError, "ユーザ #{slack_name} のGitHubアカウントが見つかりませんでした。" if github_name.nil?
+        raise RTaskToGcError, "ユーザ #{slack_name} のGitHubアカウントが見つかりませんでした。" if github_name.nil?
 
         tasks = fetch_rtask_tasks(github_name)
 
@@ -39,7 +40,7 @@ module Swimmy
 
         messages.empty? ? "同期対象のタスクはありませんでした。" : messages.join("\n")
       rescue Errno::ENOENT => e
-        raise TaskUpError, "必要なファイルまたはディレクトリが見つかりませんでした: #{e.message}"
+        raise RTaskToGcError, "必要なファイルまたはディレクトリが見つかりませんでした: #{e.message}"
       end
 
       private
@@ -50,18 +51,18 @@ module Swimmy
 
         unless status.success?
           error_msg = stderr.empty? ? "rtaskの実行に失敗しましたが、エラーメッセージはありませんでした。" : stderr
-          raise TaskUpError, error_msg
+          raise RTaskToGcError, error_msg
         end
 
         msg = stdout.empty? ? "rtaskの実行に成功しましたが、出力はありませんでした。" : stdout
         list = parse_rtask_json(msg)
-        list.map { |attrs| Resource::TaskUpTask.new(attrs) }
+        list.map { |attrs| Resource::RTaskToGc.new(attrs) }
       end
 
       def parse_rtask_json(json_string)
         JSON.parse(json_string)
       rescue JSON::ParserError
-        raise TaskUpError, "JSONのパースに失敗しました。出力内容を確認してください。"
+        raise RTaskToGcError, "JSONのパースに失敗しました。出力内容を確認してください。"
       end
 
       def event_registered?(event)

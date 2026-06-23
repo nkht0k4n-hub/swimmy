@@ -24,5 +24,6 @@ module Swimmy
     autoload :Numbersapi, "#{dir}/numbersapi.rb"
     autoload :GoogleCalendar, "#{dir}/schedule_service.rb"
     autoload :Spotify, "#{dir}/spotify.rb"
+    autoload :RTaskToGc, "#{dir}/rtask_to_gc.rb"
   end
 end
