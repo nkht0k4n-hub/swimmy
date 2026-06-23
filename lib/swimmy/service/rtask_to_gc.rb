@@ -9,16 +9,16 @@ module Swimmy
     class RTaskToGc
       class RTaskToGcError < StandardError; end
 
-      RASK_CLI_DIR =  ENV['RASK_CLI_PASS']
 
-      def initialize(spreadsheet, target_dir: RASK_CLI_DIR)
+      def initialize(spreadsheet, target_dir: RASK_CLI_DIR, rask_url: RASK_URL)
         @spreadsheet = spreadsheet
         @target_dir = target_dir
+        @rask_url = rask_url
       end
 
       def sync_rtask_to_google_calendar(slack_name)
         github_name = NameResolver.new(@spreadsheet).name_slack_to_github(slack_name)
-        raise RTaskToGcError, "ユーザ #{slack_name} のGitHubアカウントが見つかりませんでした。" if github_name.nil?
+        raise RTaskToGcError, "ユーザ #{slack_name} のGitHubアカウントが見つかりませんでした．" if github_name.nil?
 
         tasks = fetch_rtask_tasks(github_name)
 
@@ -31,14 +31,14 @@ module Swimmy
 
           event = Resource::CalendarEvent.new(task.content, task.start_time_as_string, task.end_time_as_string)
           if event_registered?(event)
-            messages << "タスク「#{task.content}」は既にカレンダーに登録されています。"
+            messages << "タスク『#{task.content}』は既にカレンダーに登録されています．"
           else
             calendar_service.add_event(event)
-            messages << "タスク「#{task.content}」をカレンダーに登録しました。"
+            messages << "タスク『#{task.content}』をカレンダーに登録しました．"
           end
         end
 
-        messages.empty? ? "同期対象のタスクはありませんでした。" : messages.join("\n")
+        messages.empty? ? "同期対象のタスクはありませんでした．" : messages.join("\n")
       rescue Errno::ENOENT => e
         raise RTaskToGcError, "必要なファイルまたはディレクトリが見つかりませんでした: #{e.message}"
       end
@@ -50,11 +50,11 @@ module Swimmy
         stdout, stderr, status = Open3.capture3(command, chdir: @target_dir)
 
         unless status.success?
-          error_msg = stderr.empty? ? "rtaskの実行に失敗しましたが、エラーメッセージはありませんでした。" : stderr
+          error_msg = stderr.empty? ? "rtaskの実行に失敗しましたが，エラーメッセージはありませんでした．" : stderr
           raise RTaskToGcError, error_msg
         end
 
-        msg = stdout.empty? ? "rtaskの実行に成功しましたが、出力はありませんでした。" : stdout
+        msg = stdout.empty? ? "rtaskの実行に成功しましたが，出力はありませんでした．" : stdout
         list = parse_rtask_json(msg)
         list.map { |attrs| Resource::RTaskToGc.new(attrs) }
       end
@@ -62,7 +62,7 @@ module Swimmy
       def parse_rtask_json(json_string)
         JSON.parse(json_string)
       rescue JSON::ParserError
-        raise RTaskToGcError, "JSONのパースに失敗しました。出力内容を確認してください。"
+        raise RTaskToGcError, "JSONのパースに失敗しました．出力内容を確認してください．"
       end
 
       def event_registered?(event)
