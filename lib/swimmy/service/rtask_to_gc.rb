@@ -31,10 +31,10 @@ module Swimmy
 
           event = Resource::CalendarEvent.new(task.content, task.start_time_as_string, task.end_time_as_string)
           if event_registered?(event)
-            messages << "タスク『#{task.content}』は既にカレンダーに登録されています．"
+            messages << "タスク『#{task.content}』は既にカレンダに登録されています．"
           else
             calendar_service.add_event(event)
-            messages << "タスク『#{task.content}』をカレンダーに登録しました．"
+            messages << "タスク『#{task.content}』をカレンダに登録しました．"
           end
         end
 
